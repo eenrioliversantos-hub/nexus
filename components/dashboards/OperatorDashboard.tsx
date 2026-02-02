@@ -65,6 +65,7 @@ interface OperatorDashboardProps {
   onFileUpload: (projectId: string, file: File, description: string) => void;
   onStartConstruction: (projectId: string) => void;
   onCommitChanges: (projectId: string, taskId: string, message: string) => void;
+  onClientsUpdate: (clients: Client[]) => void;
 
   // Communication Hub Props
   conversations: Conversation[];
@@ -132,7 +133,7 @@ const ImportModulePhases = [
 
 
 const OperatorDashboard: React.FC<OperatorDashboardProps> = (props) => {
-    const { onLogout, quoteRequests, proposals, projects: initialProjects, contracts, invoices, artifacts, onCreateProposalFromEstimator, onSendProposal, onRequestValidation, onArtifactsUpdate, onSendFinalProduct, onMarkInvoiceAsPaid, onFileUpload, onCommitChanges } = props;
+    const { onLogout, quoteRequests, proposals, projects: initialProjects, contracts, invoices, artifacts, onCreateProposalFromEstimator, onSendProposal, onRequestValidation, onArtifactsUpdate, onSendFinalProduct, onMarkInvoiceAsPaid, onFileUpload, onCommitChanges, onClientsUpdate } = props;
     const [currentView, setCurrentView] = useState('dashboard');
     const [context, setContext] = useState<any>({});
     const [projects, setProjects] = useState<Project[]>(initialProjects);
@@ -166,7 +167,7 @@ const OperatorDashboard: React.FC<OperatorDashboardProps> = (props) => {
     };
 
     const handleDeleteProject = (projectId: string) => {
-        if (window.confirm("Tem certeza que deseja desmontar esta linha de produção? A ação não pode ser desfeita.")) {
+        if (window.confirm("Tem certeza que deseja desmontar esta linha de produção? Ação não pode ser desfeita.")) {
             setProjects(prev => prev.filter(p => p.id !== projectId));
             handleSetView('projects');
         }
@@ -193,7 +194,7 @@ const OperatorDashboard: React.FC<OperatorDashboardProps> = (props) => {
 
     const renderContent = () => {
         switch (currentView) {
-            case 'dashboard': return <DashboardPage />;
+            case 'dashboard': return <DashboardPage projects={projects} invoices={invoices} clients={props.clients} />;
             case 'workspace': return <OperatorWorkspace setCurrentView={handleSetView} />;
             case 'projects': return <ProjectPage 
                                         projects={projects} 
@@ -207,7 +208,7 @@ const OperatorDashboard: React.FC<OperatorDashboardProps> = (props) => {
                 const projectToEdit = projects.find(p => p.id === context.projectId);
                 return <NewProjectPage onBack={() => handleSetView('construction_hub', { projectId: context.projectId })} onSave={handleUpdateProject} initialData={projectToEdit} />;
             }
-            case 'clients': return <OperatorClientsPage />;
+            case 'clients': return <OperatorClientsPage clients={props.clients} onClientsUpdate={onClientsUpdate} />;
             case 'quote_requests': return <OperatorQuoteRequestsPage quoteRequests={quoteRequests} onCreateProposal={handleNavigateToEstimator} onViewDetails={(quoteId) => handleSetView('quote_request_detail', { quoteId })} />;
             case 'quote_request_detail': {
                 const quote = quoteRequests.find(q => q.id === context.quoteId);
@@ -345,7 +346,7 @@ const OperatorDashboard: React.FC<OperatorDashboardProps> = (props) => {
             case 'import_module': return <ModuleWrapper title="Módulo: Importar" icon="upload" phases={ImportModulePhases} ModuleComponent={ImportModelingModule} onBack={() => handleSetView('new_session')} />;
             case 'communication': return <CommunicationHub onBack={() => handleSetView('dashboard')} {...props} />;
             case 'reports': return <OperatorReportsPage />;
-            default: return <DashboardPage />;
+            default: return <DashboardPage projects={projects} invoices={invoices} clients={props.clients} />;
         }
     };
     

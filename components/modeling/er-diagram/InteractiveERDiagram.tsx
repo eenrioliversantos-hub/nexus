@@ -8,7 +8,8 @@ import ReactFlow, {
   Background,
   Connection,
   Edge,
-} from 'react-flow-renderer';
+} from 'reactflow';
+import 'reactflow/dist/style.css';
 import { Entity } from '../steps/Step8Entities';
 import EntityNode from './EntityNode';
 

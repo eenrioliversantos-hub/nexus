@@ -112,7 +112,16 @@ const ClientDashboard: React.FC<ClientDashboardProps> = (props) => {
 
     const renderContent = () => {
         switch (view) {
-            case 'dashboard': return <ClientDashboardPage setView={handleSetView} onQuoteRequest={onQuoteRequest} pendingValidations={pendingValidations} projectForAssets={projectForAssets} projectsForDelivery={projectsForDelivery} projects={projects} />;
+            case 'dashboard': 
+                return <ClientDashboardPage 
+                            setView={handleSetView} 
+                            onQuoteRequest={onQuoteRequest} 
+                            pendingValidations={pendingValidations} 
+                            projectForAssets={projectForAssets} 
+                            projectsForDelivery={projectsForDelivery} 
+                            projects={projects} 
+                            invoices={invoices} // Prop adicionada aqui
+                        />;
             case 'projects': return <ClientProjectsPage projects={projects} onProjectSelect={(projectId) => handleSetView('client_project_detail', { projectId })} />;
             case 'client_project_detail': {
                 const project = projects.find(p => p.id === context.projectId);
@@ -169,7 +178,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = (props) => {
                 if (!project || !validation) return <div>Validação não encontrada.</div>;
                 return <ClientValidationPage project={project} validation={validation} onBack={() => handleSetView('client_project_detail', { projectId: project.id })} onApprove={handleValidationApproval} onRequestChanges={handleValidationChangesRequest} />;
             }
-            default: return <ClientDashboardPage setView={handleSetView} onQuoteRequest={onQuoteRequest} pendingValidations={pendingValidations} projectForAssets={projectForAssets} projectsForDelivery={projectsForDelivery} projects={projects} />;
+            default: return <ClientDashboardPage setView={handleSetView} onQuoteRequest={onQuoteRequest} pendingValidations={pendingValidations} projectForAssets={projectForAssets} projectsForDelivery={projectsForDelivery} projects={projects} invoices={invoices} />;
         }
     };
     

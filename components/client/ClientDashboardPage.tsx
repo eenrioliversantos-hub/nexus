@@ -8,33 +8,32 @@ import { Badge } from '../ui/Badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/Table';
 import { Dialog } from '../ui/Dialog';
 import ClientQuoteRequestForm from './ClientQuoteRequestForm';
-import { QuoteRequest, ProjectValidation, Project } from '../../types';
+import { QuoteRequest, ProjectValidation, Project, Invoice } from '../../types';
+import MetricCard from '../dashboard/MetricCard'; // Reutilizando o MetricCard
 
-const metricCards = [
-    { title: 'Produtos em Produção', value: '2', icon: 'package', change: 'Linha de montagem ativa' },
-    { title: 'Faturas Pendentes', value: '1', icon: 'creditCard', change: 'R$ 8.500,00' },
-    { title: 'Próxima Entrega', value: '25/07', icon: 'truck', change: 'Módulo de Relatórios' },
-    { title: 'Mensagens', value: '3', icon: 'messageSquare', change: 'Da engenharia' },
-];
-
-const activeProjects = [
-    { name: 'Sistema ERP - TechCorp', progress: 75, status: 'Na Linha de Montagem', manager: 'Maria Oliveira' },
-    { name: 'E-commerce - Digital Store', progress: 25, status: 'Fase de Design', manager: 'Carlos Silva' },
-];
-
-const recentInvoices = [
-    { id: 'FAT-003', project: 'Sistema ERP', date: '15/07/2024', value: 'R$ 8.500,00', status: 'Pendente' },
-    { id: 'FAT-002', project: 'Sistema ERP', date: '15/06/2024', value: 'R$ 12.000,00', status: 'Paga' },
-    { id: 'FAT-001', project: 'E-commerce', date: '01/06/2024', value: 'R$ 5.000,00', status: 'Paga' },
-];
-
-const getStatusBadge = (status: string) => {
+const getStatusBadge = (status: Invoice['status']) => {
     switch(status) {
-        case 'Paga': return <Badge variant="secondary" className="bg-green-500/10 text-green-400">Paga</Badge>;
-        case 'Pendente': return <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-400">Pendente</Badge>;
+        case 'paid': return <Badge variant="secondary" className="bg-green-500/10 text-green-400">Paga</Badge>;
+        case 'pending': return <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-400">Pendente</Badge>;
+        case 'overdue': return <Badge variant="secondary" className="bg-red-500/10 text-red-400">Vencida</Badge>;
         default: return <Badge variant="outline">{status}</Badge>;
     }
 }
+
+// Função para determinar o progresso com base no status
+const getProgressByStatus = (status: Project['status']): number => {
+    const progressMap: Record<Project['status'], number> = {
+        planning: 25,
+        in_progress: 75,
+        completed: 100,
+        on_hold: 40,
+        cancelled: 0,
+        awaiting_validation: 60,
+        awaiting_delivery_approval: 95,
+        changes_requested: 80,
+    };
+    return progressMap[status] || 0;
+};
 
 interface ClientDashboardPageProps {
     setView: (view: string, context?: any) => void;
@@ -42,10 +41,19 @@ interface ClientDashboardPageProps {
     pendingValidations: (ProjectValidation & { projectName: string, projectId: string })[];
     projectForAssets?: Project;
     projectsForDelivery: Project[];
-    projects: Project[]; // Add projects to props
+    projects: Project[];
+    invoices?: Invoice[]; 
 }
 
-const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ setView, onQuoteRequest, pendingValidations, projectForAssets, projectsForDelivery, projects }) => {
+const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ 
+    setView, 
+    onQuoteRequest, 
+    pendingValidations, 
+    projectForAssets, 
+    projectsForDelivery, 
+    projects = [], 
+    invoices = [] 
+}) => {
     const [isRequestingQuote, setIsRequestingQuote] = useState(false);
 
     const handleQuoteSubmit = (requestData: Omit<QuoteRequest, 'id' | 'status' | 'createdAt'>) => {
@@ -53,7 +61,13 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ setView, onQu
         setIsRequestingQuote(false);
     };
     
-    const planningProjects = (projects || []).filter(p => p.status === 'planning');
+    const planningProjects = projects.filter(p => p.status === 'planning');
+    const activeProjects = projects.filter(p => p.status === 'in_progress' || p.status === 'planning');
+    const pendingInvoices = invoices.filter(inv => inv.status === 'pending');
+    const pendingInvoicesCount = pendingInvoices.length;
+    const pendingInvoicesValue = pendingInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+
+    const sortedInvoices = [...invoices].sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime()).slice(0, 5);
 
     return (
         <div className="space-y-8">
@@ -68,7 +82,7 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ setView, onQu
             
             {/* DELIVERY APPROVAL */}
             {projectsForDelivery.length > 0 && (
-                <Card className="bg-green-500/10 border-green-500/30">
+                 <Card className="bg-green-500/10 border-green-500/30">
                     <CardHeader>
                         <CardTitle className="text-green-300 flex items-center gap-2">
                             <Icon name="package" className="h-5 w-5"/> Entrega Pronta para Expedição!
@@ -152,18 +166,10 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ setView, onQu
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {metricCards.map(card => (
-                    <Card key={card.title}>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-                            <Icon name={card.icon} className="h-4 w-4 text-text-secondary" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{card.value}</div>
-                            <p className="text-xs text-text-secondary">{card.change}</p>
-                        </CardContent>
-                    </Card>
-                ))}
+                <MetricCard title="Produtos em Produção" value={activeProjects.length.toString()} icon='package' change='Linha de montagem ativa' />
+                <MetricCard title='Faturas Pendentes' value={pendingInvoicesCount.toString()} icon='creditCard' change={pendingInvoicesValue.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})} />
+                <MetricCard title='Próxima Entrega' value='N/A' icon='truck' change='Módulo de Relatórios' />
+                <MetricCard title='Mensagens' value='N/A' icon='messageSquare' change='Da engenharia' />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -175,15 +181,15 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ setView, onQu
                         </CardHeader>
                         <CardContent className="space-y-6">
                             {activeProjects.map(project => (
-                                <div key={project.name}>
+                                <div key={project.id}>
                                     <div className="flex justify-between items-center mb-2">
                                         <div>
                                             <h4 className="font-semibold">{project.name}</h4>
-                                            <p className="text-sm text-text-secondary">Supervisor: {project.manager}</p>
+                                            <p className="text-sm text-text-secondary">Gerente: Carlos Silva</p> {/* Placeholder */}
                                         </div>
-                                        <Badge variant="outline" className="bg-accent/10 text-accent border-accent/20">{project.status}</Badge>
+                                        <Badge variant="outline" className="bg-accent/10 text-accent border-accent/20">Em Andamento</Badge>
                                     </div>
-                                    <Progress value={project.progress} />
+                                    <Progress value={getProgressByStatus(project.status)} />
                                 </div>
                             ))}
                             <Button variant="outline" className="w-full" onClick={() => setView('projects')}>Ver detalhes de todos</Button>
@@ -223,16 +229,16 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ setView, onQu
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {recentInvoices.map(invoice => (
+                            {sortedInvoices.map(invoice => (
                                 <TableRow key={invoice.id}>
                                     <TableCell className="font-medium">{invoice.id}</TableCell>
-                                    <TableCell>{invoice.project}</TableCell>
-                                    <TableCell className="text-text-secondary">{invoice.date}</TableCell>
-                                    <TableCell>{invoice.value}</TableCell>
+                                    <TableCell>{invoice.projectName}</TableCell>
+                                    <TableCell className="text-text-secondary">{new Date(invoice.issueDate).toLocaleDateString()}</TableCell>
+                                    <TableCell>{invoice.amount.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</TableCell>
                                     <TableCell>{getStatusBadge(invoice.status)}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="sm">
-                                            <Icon name="download" className="h-4 w-4"/>
+                                        <Button variant="ghost" size="sm" onClick={() => setView('invoice_detail', { invoiceId: invoice.id })}>
+                                            <Icon name="eye" className="h-4 w-4"/>
                                         </Button>
                                     </TableCell>
                                 </TableRow>

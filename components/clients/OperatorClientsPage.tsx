@@ -1,77 +1,22 @@
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/Card"
-import { Button } from "../ui/Button"
-import { Input } from "../ui/Input"
-import { Badge } from "../ui/Badge"
-import Avatar from "../shared/Avatar"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/Tabs"
-import Icon from "../shared/Icon"
-import ClientForm from "./ClientForm"
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/Card";
+import { Button } from "../ui/Button";
+import { Input } from "../ui/Input";
+import { Badge } from "../ui/Badge";
+import Avatar from "../shared/Avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/Tabs";
+import Icon from "../shared/Icon";
+import ClientForm from "./ClientForm";
+import { Client } from "../../types";
 
-export interface Client {
-  id: string;
-  name: string;
-  company: string;
-  email: string;
-  phone: string;
-  status: 'active' | 'prospect' | 'inactive';
-  projects: number;
-  totalValue: string;
-  satisfaction: number;
-  lastContact: string;
-  avatar: string;
-  tags: string[];
+interface OperatorClientsPageProps {
+  clients: Client[];
+  onClientsUpdate: (clients: Client[]) => void;
 }
 
-const initialClients: Client[] = [
-    {
-      id: "1",
-      name: "João Silva",
-      company: "TechCorp Solutions",
-      email: "joao@techcorp.com",
-      phone: "(11) 99999-9999",
-      status: "active",
-      projects: 3,
-      totalValue: "R$ 85.000",
-      satisfaction: 4.9,
-      lastContact: "2024-01-20",
-      avatar: "/placeholder-user.jpg",
-      tags: ["Premium", "Recorrente"],
-    },
-    {
-      id: "2",
-      name: "Maria Santos",
-      company: "Digital Innovations",
-      email: "maria@digital.com",
-      phone: "(11) 88888-8888",
-      status: "active",
-      projects: 2,
-      totalValue: "R$ 45.000",
-      satisfaction: 4.7,
-      lastContact: "2024-01-18",
-      avatar: "/placeholder-user.jpg",
-      tags: ["Novo Cliente"],
-    },
-    {
-      id: "3",
-      name: "Pedro Costa",
-      company: "StartupX",
-      email: "pedro@startupx.com",
-      phone: "(11) 77777-7777",
-      status: "prospect",
-      projects: 0,
-      totalValue: "R$ 0",
-      satisfaction: 0,
-      lastContact: "2024-01-15",
-      avatar: "/placeholder-user.jpg",
-      tags: ["Prospect", "Interessado"],
-    },
-  ];
-
-export default function OperatorClientsPage() {
+export default function OperatorClientsPage({ clients, onClientsUpdate }: OperatorClientsPageProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
-  const [clients, setClients] = useState<Client[]>(initialClients);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
@@ -87,17 +32,15 @@ export default function OperatorClientsPage() {
 
   const handleDeleteClient = (clientId: string) => {
     if (window.confirm("Tem certeza que deseja excluir este cliente?")) {
-      setClients(clients.filter(c => c.id !== clientId));
+      onClientsUpdate(clients.filter(c => c.id !== clientId));
     }
   };
 
   const handleSaveClient = (clientData: Client) => {
     if (editingClient) {
-      // Update existing client
-      setClients(clients.map(c => c.id === clientData.id ? clientData : c));
+      onClientsUpdate(clients.map(c => c.id === clientData.id ? clientData : c));
     } else {
-      // Add new client
-      setClients([...clients, { ...clientData, id: Date.now().toString() }]);
+      onClientsUpdate([...clients, { ...clientData, id: Date.now().toString() }]);
     }
     setIsFormVisible(false);
     setEditingClient(null);
@@ -112,23 +55,23 @@ export default function OperatorClientsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
-        return "text-green-400 bg-green-500/10 border-green-500/20"
+        return "text-green-400 bg-green-500/10 border-green-500/20";
       case "prospect":
-        return "text-blue-400 bg-blue-500/10 border-blue-500/20"
+        return "text-blue-400 bg-blue-500/10 border-blue-500/20";
       case "inactive":
-        return "text-text-secondary bg-sidebar border-card-border"
+        return "text-text-secondary bg-sidebar border-card-border";
       default:
-        return "text-text-secondary bg-sidebar border-card-border"
+        return "text-text-secondary bg-sidebar border-card-border";
     }
   }
 
   const filteredClients = clients.filter((client) => {
     const matchesSearch =
       client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.company.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesTab = activeTab === "all" || client.status === activeTab
-    return matchesSearch && matchesTab
-  })
+      client.company.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesTab = activeTab === "all" || client.status === activeTab;
+    return matchesSearch && matchesTab;
+  });
   
   if (isFormVisible) {
     return <ClientForm initialData={editingClient} onSave={handleSaveClient} onCancel={handleCancelForm} />;
@@ -286,5 +229,5 @@ export default function OperatorClientsPage() {
           </TabsContent>
         </Tabs>
       </div>
-  )
+  );
 }
